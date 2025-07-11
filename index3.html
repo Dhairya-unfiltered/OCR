@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Camera Text Extractor</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    video, canvas, img {
+      width: 100%;
+      max-width: 300px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 10px;
+      background: #f4f4f4;
+      white-space: pre-wrap;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📷 Extract Text from Camera</h1>
+  <video id="video" autoplay></video><br>
+  <button onclick="capture()">📸 Capture</button>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <img id="snapshot" style="display:none;" />
+  <div id="result" contenteditable="true">Detected text will appear here...</div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const snapshot = document.getElementById('snapshot');
+    const resultDiv = document.getElementById('result');
+
+    // Access user's camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(err => {
+        alert("Camera access denied or not supported");
+        console.error(err);
+      });
+
+    function capture() {
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      const imageDataURL = canvas.toDataURL('image/png');
+      snapshot.src = imageDataURL;
+      snapshot.style.display = "block";
+
+      // Use Tesseract to extract text
+      resultDiv.textContent = "⏳ Recognizing text...";
+      Tesseract.recognize(
+        imageDataURL,
+        'eng',
+        { logger: m => console.log(m) }
+      ).then(({ data: { text } }) => {
+        resultDiv.textContent = text || "❌ No text detected.";
+      }).catch(err => {
+        resultDiv.textContent = "❌ Error detecting text.";
+        console.error(err);
+      });
+    }
+  </script>
+
+</body>
+</html>
