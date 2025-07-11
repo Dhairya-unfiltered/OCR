@@ -23,7 +23,7 @@
       white-space: pre-wrap;
       border: 1px solid #ccc;
     }
-    button {
+    button, select {
       padding: 10px 20px;
       margin-top: 10px;
       font-size: 16px;
@@ -33,7 +33,13 @@
 <body>
 
   <h1>📷 Extract Text from Camera</h1>
-  <video id="video" autoplay></video><br>
+
+  <select id="cameraSelect">
+    <option value="environment">📸 Back Camera</option>
+    <option value="user">🤳 Front Camera</option>
+  </select>
+  <br>
+  <video id="video" autoplay playsinline></video><br>
   <button onclick="capture()">📸 Capture</button>
   <canvas id="canvas" style="display:none;"></canvas>
   <img id="snapshot" style="display:none;" />
@@ -44,16 +50,34 @@
     const canvas = document.getElementById('canvas');
     const snapshot = document.getElementById('snapshot');
     const resultDiv = document.getElementById('result');
+    const cameraSelect = document.getElementById('cameraSelect');
 
-    // Access user's camera
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
+    let currentStream;
+
+    function startCamera(facingMode = "environment") {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { exact: facingMode } }
+      }).then(stream => {
+        currentStream = stream;
         video.srcObject = stream;
-      })
-      .catch(err => {
-        alert("Camera access denied or not supported");
+      }).catch(err => {
+        alert("Camera access failed. Try switching camera or use HTTPS.");
         console.error(err);
       });
+    }
+
+    // Initialize with back camera
+    startCamera();
+
+    // Handle camera change
+    cameraSelect.addEventListener('change', () => {
+      const selected = cameraSelect.value;
+      startCamera(selected);
+    });
 
     function capture() {
       const ctx = canvas.getContext('2d');
@@ -64,7 +88,7 @@
       snapshot.src = imageDataURL;
       snapshot.style.display = "block";
 
-      // Use Tesseract to extract text
+      // OCR using Tesseract
       resultDiv.textContent = "⏳ Recognizing text...";
       Tesseract.recognize(
         imageDataURL,
